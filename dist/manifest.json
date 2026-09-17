@@ -1,0 +1,13 @@
+{
+  "name": "Psych Admin — Juliana Maranho",
+  "short_name": "Psych Admin",
+  "description": "Gestão administrativa do consultório de Juliana Maranho.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#42573d",
+  "icons": [
+    {"src":"./assets/icons/app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
