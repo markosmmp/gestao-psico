@@ -47,16 +47,18 @@ function updateRecord_(sheetName, idColumn, id, changes) {
 }
 
 function generateId_(sheetName, idColumn, prefix, digits) {
+  const rows = rowsToObjects_(sheetName);
+  const max = rows.reduce((highest, row) => {
+    const match = String(row[idColumn] || '').match(/(\d+)$/);
+    return Math.max(highest, match ? Number(match[1]) : 0);
+  }, 0);
+  return prefix + '-' + String(max + 1).padStart(digits, '0');
+}
+
+function withScriptLock_(callback) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    const rows = rowsToObjects_(sheetName);
-    const max = rows.reduce((highest, row) => {
-      const match = String(row[idColumn] || '').match(/(\d+)$/);
-      return Math.max(highest, match ? Number(match[1]) : 0);
-    }, 0);
-    return prefix + '-' + String(max + 1).padStart(digits, '0');
-  } finally { lock.releaseLock(); }
+  lock.waitLock(15000);
+  try { return callback(); } finally { lock.releaseLock(); }
 }
 
 function now_() { return Utilities.formatDate(new Date(), getTimezone_(), "yyyy-MM-dd'T'HH:mm:ssXXX"); }
@@ -65,6 +67,32 @@ function asNumber_(value) { const number = Number(String(value).replace(',', '.'
 function assertAllowed_(value, allowed, field) { if (allowed.indexOf(String(value)) < 0) throw new Error('Valor inválido para ' + field + '.'); }
 function safeText_(value, max) { return String(value == null ? '' : value).trim().slice(0, max || 500); }
 function assertAdministrativeNote_(value) { if (safeText_(value, 2000).length > 1000) throw new Error('Observação administrativa muito longa.'); }
+
+function assertMoney_(value, field, allowZero) {
+  const number = asNumber_(value);
+  if (number < 0 || (!allowZero && number === 0)) throw new Error((field || 'Valor') + ' deve ser maior que zero.');
+  return number;
+}
+
+function assertDate_(value, field, optional) {
+  const text = safeText_(value, 10);
+  if (!text && optional) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) throw new Error((field || 'Data') + ' inválida.');
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  if (date.getFullYear() !== Number(match[1]) || date.getMonth() !== Number(match[2]) - 1 || date.getDate() !== Number(match[3])) throw new Error((field || 'Data') + ' inválida.');
+  return text;
+}
+
+function assertTime_(value, field, optional) {
+  const text = safeText_(value, 5);
+  if (!text && optional) return '';
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) throw new Error((field || 'Horário') + ' inválido.');
+  return text;
+}
+
+function cents_(value) { return Math.round(Number(value || 0) * 100); }
+function fromCents_(value) { return Math.round(value) / 100; }
 
 function logAction_(action, entity, entityId, details) {
   getSheet_(SHEETS.LOG).appendRow([now_(), action, entity, entityId, JSON.stringify(details || {})]);
@@ -79,6 +107,7 @@ function fail_(error) { console.error(error); return json_({ success: false, err
 
 function setupSpreadsheet() {
   const spreadsheet = getSpreadsheet_();
+  spreadsheet.setSpreadsheetTimeZone(DEFAULT_CONFIG.timezone);
   Object.keys(COLUMNS).forEach(name => {
     let sheet = spreadsheet.getSheetByName(name);
     if (!sheet) sheet = spreadsheet.insertSheet(name);

@@ -21,7 +21,14 @@ const ALLOWED = Object.freeze({
   patientStatus: ['ATIVO','PAUSADO','ENCERRADO','EM_AVALIACAO'],
   appointmentStatus: ['AGENDADO','REALIZADO','CANCELADO','FALTOU','REMARCADO'],
   paymentStatus: ['PENDENTE','PAGO','ISENTO'],
+  paymentRecordStatus: ['PAGO','PENDENTE','CANCELADO'],
   paymentMethod: ['PIX','DINHEIRO','CARTAO','TRANSFERENCIA','OUTRO']
+});
+
+const FINANCE_RULES = Object.freeze({
+  BILLABLE_APPOINTMENT_STATUS: ['REALIZADO'],
+  FORECAST_APPOINTMENT_STATUS: ['AGENDADO'],
+  NON_BILLABLE_APPOINTMENT_STATUS: ['CANCELADO','FALTOU','REMARCADO']
 });
 
 const DEFAULT_CONFIG = Object.freeze({
